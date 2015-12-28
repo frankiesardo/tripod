@@ -52,7 +52,6 @@ Just create them manually and place them in the route table.
 
 - No async. Could be implemented separately but this is out of scope for the moment.
 
-
 ## Roadmap
 
 - More descriptive errors (if you mess up some data structure at the moment you might get some very incomprehensible errors.)
@@ -62,3 +61,7 @@ Just create them manually and place them in the route table.
 - Core.match for exceptions
 
 - Share a routing builder library with pedestal maybe?
+
+## Download
+
+[![Clojars Project](http://clojars.org/frankiesardo/tripod/latest-version.svg)](http://clojars.org/frankiesardo/tripod)
