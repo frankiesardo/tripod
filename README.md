@@ -15,8 +15,8 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
  {:status 200 :body "Your profile info"})
 
 (defroutes routes
-  [["/" home
-     ["/user/:id" user]])
+  [["/" home ^:interceptors [logged-in]
+     ["/user/:id" user ^:constraints {:id #"[0-9]+"}]]])
 
 (def service
   (-> {::tripod/routes routes}
