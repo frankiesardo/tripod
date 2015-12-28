@@ -1,6 +1,6 @@
 # Tripod
 
-Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and delivers it in a self contained routing library.
+Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and delivers it as a self contained routing library.
 
 ## How does it look like
 
@@ -55,5 +55,7 @@ Just create them manually and place them in the route table.
 - More descriptive errors (if you mess up some data structure at the moment you might get some very incomprehensible errors.)
 
 - Wiki and docs
+
+- Core.match for exceptions
 
 - Share a routing builder library with pedestal maybe?
