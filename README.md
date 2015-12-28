@@ -27,6 +27,8 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
 
 ```
 
+Or have a look at a complete example for [ClojureScript](https://github.com/frankiesardo/tripod/blob/master/example/web/src/app/core.cljs) or [Ring](https://github.com/frankiesardo/tripod/blob/master/example/server/src/app/core.clj)
+
 ## Why should you care
 
 Because route as data and execution flow as data is a fantastic way of dealing with complexity.
