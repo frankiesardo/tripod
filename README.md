@@ -1,4 +1,5 @@
-# Tripod
+# Tripod [![Build status](https://circleci.com/gh/frankiesardo/tripod.svg?style=shield)](https://circleci.com/gh/frankiesardo/tripod)
+
 
 Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and delivers it as a self contained routing library.
 
