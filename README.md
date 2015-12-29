@@ -39,8 +39,7 @@ TODO: write convincing stories here.
 ## Differences from pedestal
 
 - No verbs (get, post etc.). A route table maps a path to a handler.
-If using with Ring, it's up to you to define a handler that deals with potentially multiple verbs.
-In ClojureScript verbs make no sense so a handler is called
+If using with Ring, it's up to you to define a handler that deals with potentially multiple verbs (I strongly suggest Liberator). On the frontend verbs make no sense.
 
 - ClojureScript support.
 A handler function must return a context with a response but since this is no http it's up to you how you want to model your routing logic.
