@@ -56,11 +56,11 @@ Also, sometimes a different way of explaining the same thing might help understa
 
 `defroutes` is just a convenience macro that calls expand-routes `(def routes (expand-routes [...]))`
 
-The `epxand-routes` function converts the terse nested routes format in a route table.
+The `epxand-routes` function converts the terse nested routes format to a route table.
 
 The terse route format, as shown in the example, consist in a nested vectors structure with:
 
-- A string representing a path (with leading "")
+- A string representing a path (with leading `"\"`)
 
 - A handler
 
@@ -88,7 +88,7 @@ When expanded, the route table looks like the following:
   :route-name ::edit-profile}]
 ```
 
-There are three routes in our application and each route has a name.
+There are three routes in our application and each route has been given a name.
 For each route you can inspect the calculated path, parameters and any applied constraint.
 You can manipulate, store, transmit and inspect the route table like you would do with any other data structure.
 
@@ -109,7 +109,7 @@ An interceptor is actually a map that look like the following:
  {:name :foo
   :enter (fn [context] ..)
   :leave (fn [context] ..)
-  :error (fn [context] ..)})
+  :error (fn [context] ..)}) ;; name is required. All other keys are optional
 ```
 
 So when an incoming request is received and a route is selected, all the `:enter` keys for the interceptor chain are called.
@@ -132,34 +132,35 @@ By now you've probably guessed it: a handler is just an interceptor! It usually 
 
 The use case of getting the request out of the context and associng a response is so common that a helper macro is supplied:
 
-``defhandler my-handler [req] (do-something ..) {:foo :bar}``
+`(defhandler my-handler [req] (do-something ..) {:foo :bar})`
 
 Expands to the exact same map as above.
 
 ### Context
 
-With Ring a middleware only has access to the current request and response.
+A Ring a middleware only has access to the current request and response.
 
-Having a higher level concept (basically a map that include request and response as submap) enables the interceptors to pass around and act on much more information.
+Having a higher level concept (basically a map that includes request and response as submaps) enables an interceptor to pass around and act on much more information.
 
-For example, information about the current selected route is usually assoced in the context under the `:route` key, which enables powerful introspection (e.g. pedestal-swagger).
+For example, information about the current selected route is usually found in the context under the `:route` key, which enables powerful introspection (e.g. pedestal-swagger).
 
-But more importantly the entire execution flow is stored in the context map. So an interceptor can control and manipulate who's going to execute after it.
+But more importantly the entire execution flow (the queue of pending interceptors) is stored in the context map. So an interceptor can control and manipulate who's going to execute after it.
 
-A common example is short-circut the execution. In the example above, `logged-in` is an interceptor that ensures that the path that it is applied to can only be accessed from a logged in user.
+A common example is short-circuiting the execution. In the example above, `logged-in` is an interceptor that ensures that the path that it is applied to can only be accessed from a logged in user.
 
-Here's what it might look like:
-
-`(def logged-in
+```clj
+(def logged-in
   {:name :logged-in
    :enter (fn [{:keys [request] :as context]
             (if (check-session request)
               context
-              (-> context tripod.interceptor/terminate (assoc :response "Nope!"))))})`
+              (-> context tripod.interceptor/terminate (assoc :response "Nope!"))))})
+
+```
 
 `tripod.interceptor/terminate` removes the remaining interceptors in the execution list.
 
-Because there are no more interceptors to execute in the enter stage, the leave stage will start an the response will be returned.
+Because there are no more interceptors to execute in the enter stage, the leave stage will start an the error response will be returned.
 
 ### Bidirectional
 
@@ -167,7 +168,7 @@ The route table gives us all the information we need to build the path for a rou
 
 A helper function `tripod/path-for-routes` accepts a route table and returns a function that maps route names (namespaced keywords) + params maps to path strings.
 
-But because all the information is readily accessible in the route table you can build a custom one if you need to.
+All the information is readily accessible in the route table and you can build a custom one if you need to.
 
 > As a potential enhancement, path-for can take the currently selected route (e.g. :view-profile) and build a new route (e.g. :edit-profile) without asking explicitly for the :id parameter. Similar to what pedestal already does.
 
@@ -180,18 +181,18 @@ A service is just a map with the following information:
 ```clj
 {:routes ...
  :router ...
- :interceptors ..
+ :interceptors ..}
 ```
 
 Where:
 
-- `:routes` is the route-table defined above.
+- `routes` is the route-table defined above.
 
-- `:router` implements the protocol `(find-route [router request])`. The default router implements a linear search trying to match the routes in the same order they are supplied in the route-table.
+- `router` implements the protocol `(find-route [router request])`. The default router performs a linear search trying to match the routes in the same order they are supplied in the route table.
 
-- `:interceptors` is a list of default interceptor that bootstrap the service. Even the routing logic (or any setup logic) can be described by interceptors!
+- `interceptors` is a list of default interceptors that bootstrap the service. Even the routing logic (or any setup logic) can be described by interceptors! These interceptors will be executed before a route is selected.
 
-`tripod/default-interceptors` assoc the default bootstrapping logic to the server map but it can be tailored to your needs.
+Tripod default behaviour is added to the map by `tripod/default-interceptors`.
 
 For a minimal application that's really all you need:
 
@@ -202,7 +203,7 @@ For a minimal application that's really all you need:
       tripod/service)))
 ```
 
-`:tripod/service` takes the service map and returns a normal ring function.
+`tripod/service` takes the service map and returns a normal ring function.
 
 That function can be invoked with a request (by default a map with `":path-info"` in it)
 `(service req)` returns the response associated to the context at the end of the interceptor execution flow.
@@ -210,7 +211,7 @@ That function can be invoked with a request (by default a map with `":path-info"
 ## Differences from pedestal
 
 - No verbs (get, post etc.). A route table maps a path to a handler.
-If using with Ring, it's up to you to define a handler that deals with potentially multiple verbs (I strongly suggest Liberator). On the frontend verbs make no sense.
+If using with Ring, it's up to you to define a handler that deals with potentially multiple verbs (Liberator is strongly suggested). On the frontend verbs make no sense.
 
 - ClojureScript support.
 A handler function must return a context with a response but since this is no http it's up to you how you want to model your routing logic.
