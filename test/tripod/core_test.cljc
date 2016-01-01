@@ -10,7 +10,7 @@
 
 (defroutes routes
   [["/" foo
-     ["/bar" bar]]])
+    ["/bar" bar]]])
 
 (def not-found
   {:name  ::not-found
@@ -20,7 +20,7 @@
             (assoc context :response ::not-found))})
 
 (def service
-  (-> {::tripod/routes routes
+  (-> {::tripod/routes       routes
        ::tripod/interceptors [not-found]}
       tripod/default-interceptors
       tripod/service))
