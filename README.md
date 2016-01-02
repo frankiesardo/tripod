@@ -109,14 +109,14 @@ An interceptor is actually a map that look like the following:
  {:name :foo
   :enter (fn [context] ..)
   :leave (fn [context] ..)
-  :error (fn [context] ..)}) ;; name is required. All other keys are optional
+  :error (fn [ex context] ..)}) ;; name is required. All other keys are optional
 ```
 
 So when an incoming request is received and a route is selected, all the `:enter` keys for the interceptor chain are called.
 
 When the last interceptor is called, the interceptor chain is executed again in reverse order calling the `:leave` functions.
 
-If an exception is thrown, the execution looks for an interceptor with an `:error` key to do something with the exception and potentially resume the execution flow.
+If an exception is thrown, the execution looks for an interceptor with an `:error` key to do something with the exception. The interceptor can either rethrown the exception to signal it cannot do anything with it or it can return a new context, in which case the execution continues normally.
 
 ### Handler
 
