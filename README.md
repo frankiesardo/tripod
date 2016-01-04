@@ -54,7 +54,7 @@ Also, sometimes a different way of explaining the same thing might help understa
 
 ### Route table
 
-`defroutes` is just a convenience macro that calls expand-routes `;> (def routes (expand-routes [...]))`
+`defroutes` is a convenience macro that calls expand-routes, so equivalent to `(def routes (expand-routes [...]))`
 
 The `expand-routes` function converts a terse nested routes format to a route table.
 
