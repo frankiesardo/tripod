@@ -41,7 +41,7 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
 
 (def path-for (tripod/path-for-routes routes))
 
-(path-for ::edit-profile {:id 1}) ;;=> "/user/1/edit"
+(path-for ::edit-profile {:id 1}) ;;=> "/users/1/edit"
 ```
 
 Or have a look at a complete example for [ClojureScript](https://github.com/frankiesardo/tripod/blob/master/example/web/src/app/core.cljs) and [Ring](https://github.com/frankiesardo/tripod/blob/master/example/server/src/app/core.clj)
