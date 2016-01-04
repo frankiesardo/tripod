@@ -8,13 +8,13 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
 [![Clojars Project](http://clojars.org/frankiesardo/tripod/latest-version.svg)](http://clojars.org/frankiesardo/tripod)
 
 
-## How does it look like
+## What does it look like
 
 ```clj
 (require '[tripod.core :as tripod :refer [defroutes defhandler])
 
 (def logged-in "Check user is logged in" ..)
-(def same-user "Check logged in user id is same as requested" ..)
+(def same-user "Check logged in user id is same as page requested" ..)
 
 (defhandler home [request]
   {:status 200 :body "You're home"})
@@ -54,9 +54,9 @@ Also, sometimes a different way of explaining the same thing might help understa
 
 ### Route table
 
-`defroutes` is just a convenience macro that calls expand-routes `(def routes (expand-routes [...]))`
+`defroutes` is just a convenience macro that calls expand-routes `;> (def routes (expand-routes [...]))`
 
-The `epxand-routes` function converts the terse nested routes format to a route table.
+The `expand-routes` function converts a terse nested routes format to a route table.
 
 The terse route format, as shown in the example, consist in a nested vectors structure with:
 
