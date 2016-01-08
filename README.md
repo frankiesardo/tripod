@@ -235,6 +235,6 @@ Just create them manually and place them in the route table.
 
 - Contextual `path-for` (reuse parameters from currently selected route)
 
-_ Port the `prefix-tree` router
+- Port the `prefix-tree` router
 
 - Share a routing builder library with pedestal maybe?
