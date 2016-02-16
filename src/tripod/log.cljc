@@ -8,6 +8,10 @@
        `(and *logfn* (*logfn* ~ns-str ~level ~@args)))))
 
 #?(:clj
+   (defmacro info [& args]
+     `(log* :info ~args)))
+
+#?(:clj
    (defmacro debug [& args]
      `(log* :debug ~args)))
 

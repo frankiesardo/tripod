@@ -1,5 +1,5 @@
 (ns tripod.chain
-  (:require #?(:clj  [tripod.log :as log]
+  (:require #?(:clj [tripod.log :as log]
                :cljs [tripod.log :as log :include-macros true])))
 
 (def queue #?(:clj clojure.lang.PersistentQueue/EMPTY :cljs cljs.core.PersistentQueue.EMPTY))
@@ -9,13 +9,13 @@
 
 ;; TODO: liter this through the call sites below.  This will allow pattern match on the results
 (defn- exception->ex-info [exception execution-id interceptor stage]
-  (ex-info (str "Interceptor Exception: " #?(:clj (.getMessage exception)
+  (ex-info (str "Interceptor Exception: " #?(:clj  (.getMessage exception)
                                              :cljs (.-message exception)))
-           (merge {:execution-id   execution-id
-                   :stage          stage
-                   :interceptor    (:name interceptor)
-                   :type           (type exception)
-                   :exception      exception}
+           (merge {:execution-id execution-id
+                   :stage        stage
+                   :interceptor  (:name interceptor)
+                   :type         (type exception)
+                   :exception    exception}
                   (ex-data exception))
            exception))
 
@@ -76,8 +76,10 @@
       (dissoc context ::queue))
     context))
 
+#?(:cljs
+   (defn with-bindings [_ res] res))
 
-(defn- enter-all
+(defn- enter-all-with-binding
   "Invokes :enter functions of all Interceptors on the execution
   ::queue of context, saves them on the ::stack of context. Returns
   updated context."
@@ -90,16 +92,32 @@
       (if (empty? queue)
         context
         (let [interceptor (peek queue)
+              pre-bindings (:bindings context)
+              ;old-context context
               context (-> context
                           (assoc ::queue (pop queue))
                           ;; conj on nil returns a list, acts like a stack:
                           (assoc ::stack (conj stack interceptor))
                           (try-f interceptor :enter))]
           (cond
+            ;(channel? context) (go-async old-context context)
             (::error context) (dissoc context ::queue)
+            (not= (:bindings context) pre-bindings) (assoc context ::rebind true)
             true (recur (check-terminators context))))))))
 
-(defn- leave-all
+(defn- enter-all
+  "Establish the bindings present in `context` as thread local
+  bindings, and then invoke enter-all-with-binding. Conditionally
+  re-establish bindings if a change in bindings is made by an
+  interceptor."
+  [context]
+  (let [context (with-bindings (:bindings context {})
+                  (enter-all-with-binding context))]
+    (if (::rebind context)
+      (recur (dissoc context ::rebind))
+      context)))
+
+(defn- leave-all-with-binding
   "Unwinds the context by invoking :leave functions of Interceptors on
   the ::stack of context. Returns updated context."
   [context]
@@ -110,11 +128,28 @@
       (if (empty? stack)
         context
         (let [interceptor (peek stack)
+              pre-bindings (:bindings context)
+              ;old-context context
               context (assoc context ::stack (pop stack))
               context (if (::error context)
                         (try-error context interceptor)
                         (try-f context interceptor :leave))]
-          (recur context))))))
+          (cond
+            ;(channel? context) (go-async old-context context)
+            (not= (:bindings context) pre-bindings) (assoc context ::rebind true)
+            true (recur context)))))))
+
+(defn leave-all
+  "Establish the bindings present in `context` as thread local
+  bindings, and then invoke leave-all-with-binding. Conditionally
+  re-establish bindings if a change in bindings is made by an
+  interceptor."
+  [context]
+  (let [context (with-bindings (:bindings context {})
+                  (leave-all-with-binding context))]
+    (if (::rebind context)
+      (recur (dissoc context ::rebind))
+      context)))
 
 (defn enqueue
   "Adds interceptors to the end of context's execution queue. Creates

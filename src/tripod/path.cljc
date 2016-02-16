@@ -1,5 +1,6 @@
 (ns tripod.path
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.set :as set]))
 
 (defn- parse-path-token [out string]
   (condp re-matches string
@@ -46,7 +47,24 @@
                          (map #(or (get path-constraints %) (re-quote %))
                               path-parts))))))
 
+(defn- uri-encode [s]
+  #?(:clj (java.net.URLEncoder/encode s "UTF-8")
+     :cljs (js/encodeURIComponent s)))
+
 (defn path-str [path-parts params]
-  (if (= [""] path-parts)
-    "/"
-    (str/join \/ (map #(get params % %) path-parts))))
+  (let [path-params (filter keyword? path-parts)
+        query-map (not-empty (select-keys params (set/difference (set (keys params)) (set path-params))))
+        path (if (= [""] path-parts) "/" (str/join \/ (map #(get params % %) path-parts)))]
+    (if query-map
+      (apply str path "?" (for [[k v] query-map] (str (name k) "=" (uri-encode v))))
+      path)))
+
+(defn path-for-routes
+  "Given a route table returns a path-for function.
+  A path-for function accepts a route name and optionally a params map and returns a path string"
+  [routes]
+  (let [linker-map (into {} (map (juxt :route-name :path-parts) routes))]
+    (fn path-for [route-name & [params]]
+      (if-let [path-parts (get linker-map route-name)]
+        (path-str path-parts params)
+        (throw (ex-info "Route not found" {:route-name route-name}))))))

@@ -26,6 +26,6 @@
       tripod/service))
 
 (deftest simple
-  (is (= ::foo (service {:path-info "/"})))
-  (is (= ::bar (service {:path-info "/bar"})))
-  (is (= ::not-found (service {:path-info "/baz"}))))
+  (is (= ::foo (service {:uri "/"})))
+  (is (= ::bar (service {:uri "/bar"})))
+  (is (= ::not-found (service {:uri "/baz"}))))

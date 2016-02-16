@@ -54,7 +54,7 @@
 (defn init []
   (let [h (History.)]
     (events/listen h EventType.NAVIGATE
-                   #(swap! app-state assoc :page (service {:path-info (.-token %)})))
+                   #(swap! app-state assoc :page (service {:uri (.-token %)})))
     (doto h
       (.setEnabled true)))
   (om/root root app-state

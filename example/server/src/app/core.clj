@@ -23,11 +23,11 @@
       tripod/service))
 
 (defn wrap-path-info [handler]
-  (fn [request]
-    (handler
-      (if (:path-info request)
-       request
-       (assoc request :path-info (:uri request))))))
+      (fn [request]
+          (handler
+            (if (:uri request)
+              request
+              (assoc request :uri (:uri request))))))
 
 (def handler
   (-> service
