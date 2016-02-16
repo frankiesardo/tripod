@@ -7,10 +7,13 @@
 
 (defn bar [_] ::bar)
 
+(defn baz [{:keys [path-for]}] (path-for ::bar))
+
 (def routes
   (tripod/expand-routes
     [["/" #'foo
-      ["/bar" #'bar]]]))
+      ["/bar" #'bar]
+      ["/baz" #'baz]]]))
 
 (def not-found
   {:name  ::not-found
@@ -28,4 +31,10 @@
 (deftest simple
   (is (= ::foo (service {:uri "/"})))
   (is (= ::bar (service {:uri "/bar"})))
-  (is (= ::not-found (service {:uri "/baz"}))))
+  (is (= ::not-found (service {:uri "/quiz"})))
+  (is (= "/bar" (service {:uri "/baz"}))))
+
+#?(:cljs
+   (deftest path-for-still-bound
+     (service {:uri "/"})
+     (is (= "/baz" (tripod/path-for ::baz)))))

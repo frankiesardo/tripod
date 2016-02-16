@@ -205,7 +205,7 @@ For a minimal application that's really all you need:
 
 `tripod/service` takes the service map and returns a normal ring function.
 
-That function can be invoked with a request (by default a map with `":path-info"` in it)
+That function can be invoked with a request (by default a map with `:uri` in it)
 `(service req)` returns the response associated to the context at the end of the interceptor execution flow.
 
 ## Differences from pedestal

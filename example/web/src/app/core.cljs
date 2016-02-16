@@ -1,39 +1,30 @@
 (ns app.core
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom]
-            [tripod.core :as tripod :refer-macros [defroutes defhandler]]
+            [tripod.core :as tripod]
             [goog.events :as events])
   (:import goog.History
            goog.history.EventType))
 
-(enable-console-print!)
-(set! tripod.log/*logfn* println)
+(set! tripod.log/*logfn* (fn [ns level & args] (when (= :info level)
+                                                 (apply println ns args))))
 
-(defhandler home [req] ::home)
+(defn home [req] ::home)
 
-(defhandler away [req] ::away)
+(defn away [req] ::away)
 
-(defroutes routes
-  [["/" home]
-   ["/away" away]])
+(defn not-found [req] ::not-found)
 
-(def not-found
-  {:name  ::not-found
-   :error (fn [context ex]
-            (when-not (-> ex ex-data :reason #{:not-found})
-              (throw (:exception ex)))
-            (set! js/window.location.hash "/")
-            (assoc context :response ::not-found))})
+(def routes
+  (tripod/expand-routes
+    [["/" #'home]
+     ["/away" #'away]
+     ["/*not-found" #'not-found]]))
 
 (def service
-  (-> {::tripod/routes routes
-       ::tripod/interceptors [not-found]}
+  (-> {::tripod/routes routes}
       tripod/default-interceptors
       tripod/service))
-
-(let [pf (tripod/path-for-routes routes)]
-  (defn path-for [route]
-    (str "#" (pf route))))
 
 (def app-state (atom {:text "HI"}))
 
@@ -43,10 +34,10 @@
   (om/component (dom/p nil "Nothing else found")))
 
 (defmethod page ::home [data owner]
-  (om/component (dom/a #js {:href (path-for ::away)} "I'm at home. Go away")))
+  (om/component (dom/a #js {:href (str "#" (tripod/path-for ::away))} "I'm at home. Go away")))
 
 (defmethod page ::away [data owner]
-  (om/component (dom/a #js {:href (path-for ::home)} "I'm away. Go home")))
+  (om/component (dom/a #js {:href (str "#" (tripod/path-for ::home))} "I'm away. Go home")))
 
 (defn root [data owner]
   (om/component (om/build page data)))
@@ -54,7 +45,9 @@
 (defn init []
   (let [h (History.)]
     (events/listen h EventType.NAVIGATE
-                   #(swap! app-state assoc :page (service {:uri (.-token %)})))
+                   #(if-let [token (not-empty (.-token %))]
+                     (swap! app-state assoc :page (service {:uri token}))
+                     (set! js/window.location.hash "/")))
     (doto h
       (.setEnabled true)))
   (om/root root app-state

@@ -36,7 +36,7 @@
     {:name  ::router
      :enter (fn [{:keys [request] :as context}]
               (when-not (:uri request)
-                (throw (ex-info "Request is missing path-info" {:request request})))
+                (throw (ex-info "Request is missing the uri" {:request request})))
               (let [[{:keys [interceptors] :as route} req] (router/find-route router request)]
                 (when-not route
                   (throw (ex-info "Router could not find a route for request"
@@ -51,7 +51,7 @@
   (let [path-for (path/path-for-routes routes)]
     {:name  ::linker
      :enter (fn [context]
-              #?(:cljs (set! *path-for*))
+              #?(:cljs (set! *path-for* path-for))
               (-> context
                   (assoc-in [:bindings #'*path-for*] path-for)
                   (assoc-in [:request :path-for] path-for)))}))
