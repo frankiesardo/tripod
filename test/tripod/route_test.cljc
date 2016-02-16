@@ -20,6 +20,6 @@
   (is (= f/route-table (route/expand-verbose-routes f/verbose-routes))))
 
 (deftest routes-test
-  (is (= f/route-table (route/expand-routes f/terse-routes)))
-  (is (thrown? #?(:clj Exception :cljs js/Error) (route/expand-routes :unexpected-input))))
+  (is (= f/route-table (tripod/expand-routes f/terse-routes)))
+  (is (thrown? #?(:clj Exception :cljs js/Error) (tripod/expand-routes :unexpected-input))))
 

@@ -1,7 +1,8 @@
-(ns tripod.fixtures)
+(ns tripod.fixtures
+  (:require [tripod.interceptor :as i]))
 
 (defn- mock [name]
-  {:name name})
+  (i/map->Interceptor {:name name}))
 
 (def foo (mock ::foo))
 (def bar (mock ::bar))

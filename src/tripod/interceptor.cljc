@@ -1,173 +1,89 @@
 (ns tripod.interceptor
-  (:require #?(:clj  [tripod.log :as log]
-               :cljs [tripod.log :as log :include-macros true])))
+  (:require [clojure.string :as str]))
 
-(def queue #?(:clj clojure.lang.PersistentQueue/EMPTY :cljs cljs.core.PersistentQueue.EMPTY))
+(defrecord Interceptor [name enter leave error])
 
-(defn execution-id []
-  #?(:clj (java.util.UUID/randomUUID) :cljs (random-uuid)))
+(defprotocol IntoInterceptor
+  (-interceptor [t] "Given a value, produce an Interceptor Record."))
 
-;; TODO: liter this through the call sites below.  This will allow pattern match on the results
-(defn- exception->ex-info [exception execution-id interceptor stage]
-  (ex-info (str "Interceptor Exception: " #?(:clj (.getMessage exception)
-                                             :cljs (.-message exception)))
-           (merge {:execution-id   execution-id
-                   :stage          stage
-                   :interceptor    (:name interceptor)
-                   :type           (type exception)
-                   :exception      exception}
-                  (ex-data exception))
-           exception))
+(declare interceptor)
 
-(defn- try-f
-  "If f is not nil, invokes it on context. If f throws an exception,
-  assoc's it on to context as ::error."
-  [context interceptor stage]
-  (let [execution-id (::execution-id context)]
-    (if-let [f (get interceptor stage)]
-      (try (log/debug :interceptor (:name interceptor)
-                      :stage stage
-                      :execution-id execution-id
-                      :fn f)
-           (f context)
-           (catch #?(:clj Throwable :cljs js/Object) e
-             (log/debug :throw e :execution-id execution-id)
-             (assoc context ::error (exception->ex-info e execution-id interceptor stage))))
-      (do (log/debug :interceptor (:name interceptor)
-                     :skipped? true
-                     :stage stage
-                     :execution-id execution-id)
-          context))))
+(defn unmangle
+  "Given the name of a class that implements a Clojure function, returns the function's name in Clojure. Note: If the true Clojure function name
+  contains any underscores (a rare occurrence), the unmangled name will
+  contain hyphens at those locations instead."
+  [f]
+  (let [class-name #?(:clj (.getName (class f)) :cljs (.-name f))]
+    (-> class-name
+        (str/replace #"^(.+)\$([^@]+)(|@.+)$" "$1/$2")
+        (str/replace #"_" "-"))))
 
-(defn- try-error
-  "If error-fn is not nil, invokes it on context and the current ::error
-  from context."
-  [context interceptor]
-  (let [execution-id (::execution-id context)]
-    (if-let [error-fn (get interceptor :error)]
-      (let [ex (::error context)]
-        (log/debug :interceptor (:name interceptor)
-                   :stage :error
-                   :execution-id execution-id)
-        (try (error-fn (dissoc context ::error) ex)
-             (catch #?(:clj Throwable :cljs js/Object) e
-               (if (identical? (type e) (type (:exception ex)))
-                 (do (log/debug :rethrow e :execution-id execution-id)
-                     context)
-                 (do (log/debug :throw e :suppressed (:exception-type ex) :execution-id execution-id)
-                     (-> context
-                         (assoc ::error (exception->ex-info e execution-id interceptor :error))
-                         (update-in [::suppressed] conj ex)))))))
-      (do (log/trace :interceptor (:name interceptor)
-                     :skipped? true
-                     :stage :error
-                     :execution-id execution-id)
-          context))))
+#?(:clj
+   (extend-protocol IntoInterceptor
+     clojure.lang.IPersistentMap
+     (-interceptor [t] (map->Interceptor t))
 
-(defn- check-terminators
-  "Invokes each predicate in ::terminators on context. If any predicate
-  returns true, removes ::queue from context."
-  [context]
-  (if (some #(% context) (::terminators context))
-    (let [execution-id (::execution-id context)]
-      (log/debug :in 'check-terminators
-                 :terminate? true
-                 :execution-id execution-id)
-      (dissoc context ::queue))
-    context))
+     clojure.lang.Fn
+     (-interceptor [t]
+       (interceptor {:enter (fn [context]
+                              (assoc context :response (t (:request context))))}))
 
+     clojure.lang.Var
+     (-interceptor [t] (let [{:keys [ns name]} (meta t)]
+                         (assoc (interceptor (deref t)) :name (keyword (str ns) (str name)))))
 
-(defn- enter-all
-  "Invokes :enter functions of all Interceptors on the execution
-  ::queue of context, saves them on the ::stack of context. Returns
-  updated context."
-  [context]
-  (log/debug :in 'enter-all :execution-id (::execution-id context))
-  (loop [context context]
-    (let [queue (::queue context)
-          stack (::stack context)]
-      (log/trace :context context)
-      (if (empty? queue)
-        context
-        (let [interceptor (peek queue)
-              context (-> context
-                          (assoc ::queue (pop queue))
-                          ;; conj on nil returns a list, acts like a stack:
-                          (assoc ::stack (conj stack interceptor))
-                          (try-f interceptor :enter))]
-          (cond
-            (::error context) (dissoc context ::queue)
-            true (recur (check-terminators context))))))))
+     Interceptor
+     (-interceptor [t] t))
+   :cljs
+   (extend-protocol IntoInterceptor
 
-(defn- leave-all
-  "Unwinds the context by invoking :leave functions of Interceptors on
-  the ::stack of context. Returns updated context."
-  [context]
-  (log/debug :in 'leave-all :execution-id (::execution-id context))
-  (loop [context context]
-    (let [stack (::stack context)]
-      (log/trace :context context)
-      (if (empty? stack)
-        context
-        (let [interceptor (peek stack)
-              context (assoc context ::stack (pop stack))
-              context (if (::error context)
-                        (try-error context interceptor)
-                        (try-f context interceptor :leave))]
-          (recur context))))))
+     cljs.core.PersistentArrayMap
+     (-interceptor [t] (map->Interceptor t))
 
-(defn enqueue
-  "Adds interceptors to the end of context's execution queue. Creates
-  the queue if necessary. Returns updated context."
-  [context & interceptors]
-  (log/trace :enqueue (map :name interceptors) :context context)
-  (update-in context [::queue]
-             (fnil into queue)
-             interceptors))
+     cljs.core.PersistentHashMap
+     (-interceptor [t] (map->Interceptor t))
 
-(defn enqueue*
-  "Like 'enqueue' but the second argument is a sequence of interceptors
-  to add to the context's execution queue."
-  [context interceptors]
-  (apply enqueue context interceptors))
+     ; This is the `handler` case
+     function
+     (-interceptor [t]
+       (interceptor {:enter (fn [context]
+                              (assoc context :response (t (:request context))))}))
 
-(defn terminate
-  "Removes all remaining interceptors from context's execution queue.
-  This effectively short-circuits execution of Interceptors' :enter
-  functions and begins executing the :leave functions."
-  [context]
-  (log/trace :in 'terminate :context context)
-  (dissoc context ::queue))
+     cljs.core.Var
+     (-interceptor [t] (let [{:keys [ns name]} (meta t)]
+                         (assoc (interceptor (deref t)) :name (keyword (str ns) (str name)))))
 
-(defn terminate-when
-  "Adds pred as a terminating condition of the context. pred is a
-  function that takes a context as its argument. It will be invoked
-  after every Interceptor's :enter function. If pred returns logical
-  true, execution will stop at that Interceptor."
-  [context pred]
-  (update-in context [::terminators] conj pred))
+     Interceptor
+     (-interceptor [t] t)))
 
-(defn- begin [context]
-  (if (contains? context ::execution-id)
-    context
-    (let [execution-id (execution-id)]
-      (log/debug :in 'begin :execution-id execution-id)
-      (log/trace :context context)
-      (assoc context ::execution-id execution-id))))
+(defn interceptor-name
+  [n]
+  (if-not (or (nil? n) (keyword? n))
+    (throw (ex-info "Name must be keyword or nil" {:name n}))
+    n))
 
-(defn- end [context]
-  (log/debug :in 'end)
-  (log/trace :context context)
-  context)
+(defn interceptor?
+  [o]
+  (= (type o) Interceptor))
 
-(defn execute [context]
-  (let [context (some-> context
-                        begin
-                        enter-all
-                        (dissoc ::queue)
-                        leave-all
-                        (dissoc ::stack ::execution-id)
-                        end)]
-    (if-let [ex (::error context)]
-      (throw ex)
-      context)))
+(defn valid-interceptor?
+  [o]
+  (if-let [int-vals (and (interceptor? o)
+                         (vals (select-keys o [:enter :leave :error])))]
+    (and (some identity int-vals)
+         (every? fn? (remove nil? int-vals))
+         (interceptor-name (:name o))
+         true)
+    false))
+
+(defn interceptor
+  "Given a value, produces and returns an Interceptor (Record)."
+  [t]
+  {:pre  [(if-not (satisfies? IntoInterceptor t)
+            (throw (ex-info "You're trying to use something as an interceptor
+                           that isn't supported by the protocol; Perhaps you need to extend it?"
+                            {:t    t
+                             :type (type t)}))
+            true)]
+   :post [valid-interceptor?]}
+  (-interceptor t))

@@ -1,5 +1,6 @@
 (ns tripod.route
-  (:require [tripod.path :as path]))
+  (:require [tripod.path :as path]
+            [tripod.interceptor :as i]))
 
 (defn- capture-constraints [m]
   (into {} (for [[k v] m] [k (str "(" (#?(:clj .toString :cljs .-source) v) ")")])))
@@ -49,20 +50,13 @@
   [routes]
   (for [[path & more] routes]
     (let [vectors (filter vector? more)
-          maps (filter map? more)
+          non-vectors (filter (complement vector?) more)
           interceptors (not-empty (apply concat (filter (comp :interceptors meta) vectors)))
           children (not-empty (filter (comp not :interceptors meta) vectors))
-          constraints (not-empty (apply merge (filter (comp :constraints meta) maps)))
-          handler (not-empty (apply merge (filter (comp not :constraints meta) maps)))]
+          constraints (not-empty (apply merge (filter (comp :constraints meta) non-vectors)))
+          handler (first (filter (comp not :constraints meta) non-vectors))]
       (cond-> {:path path}
-              handler (assoc :handler handler)
+              handler (assoc :handler (i/interceptor handler))
               interceptors (assoc :interceptors (vec interceptors))
               constraints (assoc :constraints constraints)
               children (assoc :children (expand-terse-routes children))))))
-
-(defn expand-routes
-  "Creates a route table out of terse routes"
-  [routes]
-  (when-not (vector? routes)
-    (throw (ex-info "Invalid routes definition" {:routes routes})))
-  (-> routes expand-terse-routes expand-verbose-routes verify-unique-route-names))

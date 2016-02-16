@@ -1,20 +1,15 @@
 (ns tripod.core
-  (:require [tripod.route]
+  (:require [tripod.route :as route]
             [tripod.router :as router]
             [tripod.path :as path]
-            [tripod.interceptor :as interceptor]))
+            [tripod.chain :as chain]))
 
-#?(:clj
-   (defmacro defroutes [name routes]
-     `(def ~name (tripod.route/expand-routes ~routes))))
-
-#?(:clj
-   (defmacro defhandler [n argv & body]
-     (let [name (keyword (name (ns-name *ns*)) (name n))]
-       `(def ~n
-          {:name  ~name
-           :enter (fn [context#]
-                    (assoc context# :response ((fn ~argv ~@body) (:request context#))))}))))
+(defn expand-routes
+  "Creates a route table out of terse routes"
+  [routes]
+  (when-not (vector? routes)
+    (throw (ex-info "Invalid routes definition" {:routes routes})))
+  (-> routes route/expand-terse-routes route/expand-verbose-routes route/verify-unique-route-names))
 
 (defn path-for-routes
   "Given a route table returns a path-for function.
@@ -33,9 +28,13 @@
   [{:keys [::interceptors] :as service-map}]
   (when-not interceptors
     (throw (ex-info "Initial interceptor queue cannot be empty" {:service-map service-map})))
-  (let [context (interceptor/enqueue* {} interceptors)]
+  (let [context (chain/enqueue* {} interceptors)]
     (fn [request]
-      (:response (interceptor/execute (assoc context :request request))))))
+      (:response (chain/execute (assoc context :request request))))))
+
+
+
+;; Defaults (TODO: better not-found logic)
 
 (defn router-interceptor [{:keys [::router ::routes] :as service-map}]
   (let [router (or router (router/linear-search routes))]
@@ -51,7 +50,7 @@
                 (-> context
                     (assoc :request req)
                     (assoc :route route)
-                    (interceptor/enqueue* interceptors))))}))
+                    (chain/enqueue* interceptors))))}))
 
 
 (comment

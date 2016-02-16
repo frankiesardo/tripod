@@ -72,3 +72,5 @@
   (comp (init) (clojars)))
 
 (bootlaces! +version+)
+(task-options! push {:ensure-clean false
+                     :tag false})

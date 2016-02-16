@@ -10,3 +10,11 @@
            (for [{:keys [path]} f/paths-with-params]
              (let [[{:keys [route-name]} {:keys [path-params]}] (router/find-route router {:path-info path})]
                [route-name path-params]))))))
+
+(comment
+  (deftest prefix-tree-test
+    (let [router (router/prefix-tree f/route-table)]
+      (is (= (map (juxt :route-name :params) f/paths-with-params)
+             (for [{:keys [path]} f/paths-with-params]
+               (let [[{:keys [route-name]} {:keys [path-params]}] (router/find-route router {:path-info path})]
+                 [route-name path-params])))))))

@@ -1,16 +1,16 @@
 (ns tripod.core-test
-  (:require #?(:clj  [clojure.test :refer :all]
-               :cljs [cljs.test :refer-macros [deftest testing is run-tests]])
-            #?(:clj  [tripod.core :as tripod :refer [defroutes defhandler]]
-               :cljs [tripod.core :as tripod :refer-macros [defroutes defhandler]])))
+  (:require [tripod.core :as tripod]
+    #?(:clj  [clojure.test :refer :all]
+       :cljs [cljs.test :refer-macros [deftest testing is run-tests]])))
 
-(defhandler foo [req] ::foo)
+(defn foo [_] ::foo)
 
-(defhandler bar [req] ::bar)
+(defn bar [_] ::bar)
 
-(defroutes routes
-  [["/" foo
-    ["/bar" bar]]])
+(def routes
+  (tripod/expand-routes
+    [["/" #'foo
+      ["/bar" #'bar]]]))
 
 (def not-found
   {:name  ::not-found
