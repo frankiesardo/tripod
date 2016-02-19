@@ -54,7 +54,8 @@
 (defn path-str [path-parts params]
   (let [path-params (filter keyword? path-parts)
         query-map (not-empty (select-keys params (set/difference (set (keys params)) (set path-params))))
-        path (if (= [""] path-parts) "/" (str/join \/ (map #(get params % %) path-parts)))]
+        path (str/join \/ (map #(get params % %) path-parts))
+        path (str (when-not (str/starts-with? path "/") "/") path)]
     (if query-map
       (apply str path "?" (for [[k v] query-map] (str (name k) "=" (uri-encode v))))
       path)))

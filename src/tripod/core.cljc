@@ -13,7 +13,7 @@
     (throw (ex-info "Invalid routes definition" {:routes routes})))
   (-> routes route/expand-terse-routes route/expand-verbose-routes route/verify-unique-route-names))
 
-(def ^:dynamic ^:private *path-for*)
+(def ^:dynamic ^:private *path-for* nil)
 
 (defn path-for [route-name & options]
   (if *path-for*
