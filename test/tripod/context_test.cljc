@@ -1,7 +1,7 @@
-(ns tripod.chain-test
+(ns tripod.context-test
   (:require #?(:clj [clojure.test :refer :all]
                :cljs [cljs.test :refer-macros [deftest testing is run-tests]])
-                    [tripod.chain :as chain]))
+                    [tripod.context :as context]))
 
 (defn trace [context direction name]
   (update-in context [::trace] (fnil conj []) [direction name]))
@@ -28,18 +28,18 @@
                    [:leave :c]
                    [:leave :b]
                    [:leave :a]]}
-         (chain/execute (chain/enqueue {}
-                                       (tracer :a)
-                                       (tracer :b)
-                                       (tracer :c))))))
+         (context/execute (context/enqueue {}
+                                           (tracer :a)
+                                           (tracer :b)
+                                           (tracer :c))))))
 
 (deftest error-propagates-test
   (is (thrown? #?(:clj Exception :cljs js/Error)
-               (chain/execute (chain/enqueue {}
-                                             (tracer :a)
-                                             (tracer :b)
-                                             (thrower :c)
-                                             (tracer :d))))))
+               (context/execute (context/enqueue {}
+                                                 (tracer :a)
+                                                 (tracer :b)
+                                                 (thrower :c)
+                                                 (tracer :d))))))
 
 (deftest error-caught-test
   (is (= {::trace [[:enter :a]
@@ -50,13 +50,13 @@
                    [:error :c :from :f]
                    [:leave :b]
                    [:leave :a]]}
-         (chain/execute (chain/enqueue {}
-                                       (tracer :a)
-                                       (tracer :b)
-                                       (catcher :c)
-                                       (tracer :d)
-                                       (tracer :e)
-                                       (thrower :f)
-                                       (tracer :g))))))
+         (context/execute (context/enqueue {}
+                                           (tracer :a)
+                                           (tracer :b)
+                                           (catcher :c)
+                                           (tracer :d)
+                                           (tracer :e)
+                                           (thrower :f)
+                                           (tracer :g))))))
 
 

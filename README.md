@@ -155,11 +155,11 @@ A common example is short-circuiting the execution. In the example above, `logge
    :enter (fn [{:keys [request] :as context]
             (if (check-session request)
               context
-              (-> context tripod.chain/terminate (assoc :response "Nope!"))))})
+              (-> context tripod.context/terminate (assoc :response "Nope!"))))})
 
 ```
 
-`tripod.chain/terminate` removes the remaining interceptors in the execution list.
+`tripod.context/terminate` removes the remaining interceptors in the execution list.
 
 Because there are no more interceptors to execute in the enter stage, the leave stage will start an the error response will be returned.
 

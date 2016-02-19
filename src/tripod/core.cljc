@@ -4,7 +4,7 @@
                     [tripod.route :as route]
                     [tripod.router :as router]
                     [tripod.path :as path]
-                    [tripod.chain :as chain]))
+                    [tripod.context :as context]))
 
 (defn expand-routes
   "Creates a route table out of terse routes"
@@ -25,9 +25,9 @@
   [{:keys [::interceptors] :as service-map}]
   (when-not interceptors
     (throw (ex-info "Initial interceptor queue cannot be empty" {:service-map service-map})))
-  (let [context (chain/enqueue* {} interceptors)]
+  (let [context (context/enqueue* {} interceptors)]
     (fn [request]
-      (:response (chain/execute (assoc context :request request))))))
+      (:response (context/execute (assoc context :request request))))))
 
 ;; Defaults
 
@@ -45,7 +45,7 @@
                 (-> context
                     (assoc :request req)
                     (assoc :route route)
-                    (chain/enqueue* interceptors))))}))
+                    (context/enqueue* interceptors))))}))
 
 (defn linker-interceptor [{:keys [::routes] :as service-map}]
   (let [path-for (path/path-for-routes routes)]

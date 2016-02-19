@@ -1,4 +1,4 @@
-(ns tripod.chain
+(ns tripod.context
   (:require #?(:clj [tripod.log :as log]
                :cljs [tripod.log :as log :include-macros true])))
 
