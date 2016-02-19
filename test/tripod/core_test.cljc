@@ -37,4 +37,8 @@
 #?(:cljs
    (deftest path-for-still-bound
      (service {:uri "/"})
-     (is (= "/baz" (tripod/path-for ::baz)))))
+     (is (= "/baz" (tripod/path-for ::baz))))
+   :clj
+   (deftest path-for-not-bound
+     (service {:uri "/"})
+     (is (thrown? Exception (tripod/path-for ::baz)))))

@@ -1,4 +1,4 @@
-(ns app.core
+(ns app.advanced
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom]
             [tripod.core :as tripod]

@@ -1,3 +1,0 @@
-{:require  [devcards.core app.core-test]
- :init-fns [devcards.core/start-devcard-ui!]
- :compiler-options {:asset-path "js/devcards.out" :devcards true}}
