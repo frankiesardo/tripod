@@ -11,25 +11,30 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
 ## What does it look like
 
 ```clj
-(require '[tripod.core :as tripod :refer [defroutes defhandler])
+(require '[tripod.core :as tripod])
 
-(def logged-in "Check user is logged in" ..)
-(def same-user "Check logged in user id is same as page requested" ..)
+(def logged-in
+  "Check user is logged in"
+   ..)
+(def same-user
+  "Check logged in user id is same as page requested"
+  ..)
 
-(defhandler home [request]
+(defn home [request]
   {:status 200 :body "You're home"})
 
-(defhandler view-profile [request]
-  {:status 200 :body "You're viewing your profile info"})
+(defn view-profile [{:keys [path-for] :as request}]
+  {:status 200 :body (format "Thanks for viewing your profile. You can edit it here %s" (path-for ::edit-profile)})
 
-(defhandler edit-profile [request]
+(defn edit-profile [request]
   {:status 200 :body "You're editing your profile info"})
 
-(defroutes routes
+(def routes
+ (tripod/expand-routes
   [["/" home ^:interceptors [logged-in]
     ["/users/:id" view-profile
      ^:constraints {:id #"\d+"} ^:interceptors [same-user]
-    ["/edit" edit-profile]]]])
+    ["/edit" edit-profile]]]]))
 
 (def service
   (-> {::tripod/routes routes}
@@ -38,10 +43,6 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
 
 (def ring-handler
   (-> service wrap-middleware-1 wrap-middleware-2 ...)))
-
-(def path-for (tripod/path-for-routes routes))
-
-(path-for ::edit-profile {:id 1}) ;;=> "/users/1/edit"
 ```
 
 Or have a look at a complete example for [ClojureScript](https://github.com/frankiesardo/tripod/blob/master/example/web/src/app/core.cljs) and [Ring](https://github.com/frankiesardo/tripod/blob/master/example/server/src/app/core.clj)
@@ -53,8 +54,6 @@ These concepts are explained exhaustively in the [pedestal docs](https://github.
 Also, sometimes a different way of explaining the same thing might help understanding a concept better.
 
 ### Route table
-
-`defroutes` is a convenience macro that calls expand-routes, so equivalent to `(def routes (expand-routes [...]))`
 
 The `expand-routes` function converts a terse nested routes format to a route table.
 
@@ -130,11 +129,13 @@ By now you've probably guessed it: a handler is just an interceptor! It usually 
           (assoc context :response {:foo :bar}))})
 ```
 
-The use case of getting the request out of the context and associng a response is so common that a helper macro is supplied:
+As a convenience functions (and vars) are converted into interceptors that gets the request key out of the context and assoc into it the response.
 
-`(defhandler my-handler [req] (do-something ..) {:foo :bar})`
+This way you can use your ring handlers out of the box without changing anything in your code:
 
-Expands to the exact same map as above.
+`(defn my-handler [req] (do-something ..) {:foo :bar})`
+
+Is conceptually equivalent to the interceptor map above.
 
 ### Context
 
@@ -154,11 +155,11 @@ A common example is short-circuiting the execution. In the example above, `logge
    :enter (fn [{:keys [request] :as context]
             (if (check-session request)
               context
-              (-> context tripod.interceptor/terminate (assoc :response "Nope!"))))})
+              (-> context tripod.chain/terminate (assoc :response "Nope!"))))})
 
 ```
 
-`tripod.interceptor/terminate` removes the remaining interceptors in the execution list.
+`tripod.chain/terminate` removes the remaining interceptors in the execution list.
 
 Because there are no more interceptors to execute in the enter stage, the leave stage will start an the error response will be returned.
 
@@ -166,9 +167,11 @@ Because there are no more interceptors to execute in the enter stage, the leave 
 
 The route table gives us all the information we need to build the path for a route given some params.
 
-A helper function `tripod/path-for-routes` accepts a route table and returns a function that maps route names (namespaced keywords) + params maps to path strings.
+A helper function `tripod.path/path-for-routes` accepts a route table and returns a function that maps route names (namespaced keywords) + params maps to path strings.
 
 All the information is readily accessible in the route table and you can build a custom one if you need to.
+
+As a convenience a function `path-for` is added by default into your request map. Also, the function `tripod.core/path-for` is dynamically bound on each incoming request, so you can use that as well.
 
 > As a potential enhancement, path-for can take the currently selected route (e.g. :view-profile) and build a new route (e.g. :edit-profile) without asking explicitly for the :id parameter. Similar to what pedestal already does.
 
@@ -192,7 +195,7 @@ Where:
 
 - `interceptors` is a list of default interceptors that bootstrap the service. Even the routing logic (or any setup logic) can be described by interceptors! These interceptors will be executed before a route is selected.
 
-Tripod default behaviour is added to the map by `tripod/default-interceptors`.
+Tripod default behaviour is added to the map by `tripod.core/default-interceptors`.
 
 For a minimal application that's really all you need:
 
@@ -231,10 +234,6 @@ Just create them manually and place them in the route table.
 
 - Core.match for exceptions
 
-- Query parameters generation
-
 - Contextual `path-for` (reuse parameters from currently selected route)
-
-- Port the `prefix-tree` router
 
 - Share a routing builder library with pedestal maybe?
