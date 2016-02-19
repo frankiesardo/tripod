@@ -8,15 +8,17 @@
 
 (declare interceptor)
 
-(defn unmangle
-  "Given the name of a class that implements a Clojure function, returns the function's name in Clojure. Note: If the true Clojure function name
-  contains any underscores (a rare occurrence), the unmangled name will
-  contain hyphens at those locations instead."
-  [f]
-  (let [class-name #?(:clj (.getName (class f)) :cljs (.-name f))]
-    (-> class-name
-        (str/replace #"^(.+)\$([^@]+)(|@.+)$" "$1/$2")
-        (str/replace #"_" "-"))))
+
+#?(:clj
+   (defn unmangle
+     "Given the name of a class that implements a Clojure function, returns the function's name in Clojure. Note: If the true Clojure function name
+     contains any underscores (a rare occurrence), the unmangled name will
+     contain hyphens at those locations instead."
+     [f]
+     (let [class-name (.getName (class f))]
+       (-> class-name
+           (str/replace #"^(.+)\$([^@]+)(|@.+)$" "$1/$2")
+           (str/replace #"_" "-")))))
 
 #?(:clj
    (extend-protocol IntoInterceptor
@@ -25,7 +27,8 @@
 
      clojure.lang.Fn
      (-interceptor [t]
-       (interceptor {:enter (fn [context]
+       (interceptor {:name  (keyword (unmangle t))
+                     :enter (fn [context]
                               (assoc context :response (t (:request context))))}))
 
      clojure.lang.Var
