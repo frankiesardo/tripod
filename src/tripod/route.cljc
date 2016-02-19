@@ -57,6 +57,6 @@
           handler (first (filter (comp not :constraints meta) non-vectors))]
       (cond-> {:path path}
               handler (assoc :handler (i/interceptor handler))
-              interceptors (assoc :interceptors (vec interceptors))
+              interceptors (assoc :interceptors (mapv i/interceptor interceptors))
               constraints (assoc :constraints constraints)
               children (assoc :children (expand-terse-routes children))))))
