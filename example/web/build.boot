@@ -5,10 +5,8 @@
  '[[org.clojure/clojurescript "1.7.122"]
    [org.omcljs/om "1.0.0-alpha22"
     :exclusions [org.clojure/clojure org.clojure/clojurescript]]
-   [devcards "0.2.1"
-    :exclusions [org.clojure/clojure org.clojure/clojurescript
-                 org.clojure/tools.reader cljsjs/react cljsjs/react-dom]]
-   [frankiesardo/tripod "0.1.1-SNAPSHOT"]
+   [sablono "0.6.2"]
+   [frankiesardo/tripod "0.2.0"]
 
    [adzerk/boot-cljs          "1.7.48-6"   :scope "test"]
    [adzerk/boot-cljs-repl     "0.2.0"      :scope "test"]

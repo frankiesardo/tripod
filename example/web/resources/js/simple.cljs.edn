@@ -1,3 +1,0 @@
-{:require  [app.simple]
- :init-fns [app.simple/init]
- :compiler-options {:asset-path "js/simple.out"}}

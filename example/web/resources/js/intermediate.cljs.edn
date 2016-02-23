@@ -1,3 +1,0 @@
-{:require  [app.intermediate]
- :init-fns [app.intermediate/init]
- :compiler-options {:asset-path "js/intermediate.out"}}

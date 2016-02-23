@@ -1,3 +1,0 @@
-{:require  [app.advanced]
- :init-fns [app.advanced/init]
- :compiler-options {:asset-path "js/advanced.out"}}
