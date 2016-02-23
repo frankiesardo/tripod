@@ -1,0 +1,1 @@
+{:require [app.core adzerk.boot-cljs-repl adzerk.boot-reload], :init-fns [app.core/-main], :compiler-options {:asset-path "js/app.out"}}
