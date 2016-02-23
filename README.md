@@ -7,6 +7,7 @@ Tripod borrows _(read: shamelessly copy)_ the interceptor chain abstraction and 
 
 [![Clojars Project](http://clojars.org/frankiesardo/tripod/latest-version.svg)](http://clojars.org/frankiesardo/tripod)
 
+## Live demo in [ClojureScript](http://frankiesardo.github.io/tripod)
 
 ## What does it look like
 
