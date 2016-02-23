@@ -60,7 +60,7 @@ The `expand-routes` function converts a terse nested routes format to a route ta
 
 The terse route format, as shown in the example, consist in a nested vectors structure with:
 
-- A string representing a path (with leading `"\"`)
+- A string representing a path (with leading `"/"`)
 
 - A handler
 
