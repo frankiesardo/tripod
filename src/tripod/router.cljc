@@ -16,7 +16,7 @@
 
 (defn linear-search
   "Given a sequence of routes, return a linear search router.
-  Matches the :uri key inside the request qith the paths in the route table"
+  Matches the :uri key inside the request with the paths in the route table"
   [routes]
   (let [matcher-routes (map #(assoc % :matcher (path-matcher %)) routes)]
     (reify
