@@ -109,7 +109,7 @@ An interceptor is actually a map that look like the following:
  {:name :foo
   :enter (fn [context] ..)
   :leave (fn [context] ..)
-  :error (fn [ex context] ..)}) ;; name is required. All other keys are optional
+  :error (fn [context ex] ..)}) ;; name is required. All other keys are optional
 ```
 
 So when an incoming request is received and a route is selected, all the `:enter` keys for the interceptor chain are called.
