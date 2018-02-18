@@ -1,6 +1,10 @@
 (ns tripod.context
   (:require #?(:clj [tripod.log :as log]
-               :cljs [tripod.log :as log :include-macros true])))
+               :cljs [tripod.log :as log :include-macros true])
+    #?(:clj [clojure.core.async :refer [go <!]]
+       :cljs [cljs.core.async :refer [<!] :refer-macros [go]])
+    #?(:clj [clojure.core.async.impl.protocols :as asyncp]
+       :cljs [cljs.core.async.impl.protocols :as asyncp])))
 
 (def queue #?(:clj clojure.lang.PersistentQueue/EMPTY :cljs cljs.core.PersistentQueue.EMPTY))
 
@@ -79,6 +83,16 @@
 #?(:cljs
    (defn with-bindings [_ res] res))
 
+(defn channel? [x]
+  (satisfies? asyncp/ReadPort x))
+
+(declare terminate)
+(declare execute)
+
+(defn go-async [old-context context-ch]
+  (go (execute (<! context-ch)))
+  (-> old-context terminate))
+
 (defn- enter-all-with-binding
   "Invokes :enter functions of all Interceptors on the execution
   ::queue of context, saves them on the ::stack of context. Returns
@@ -93,14 +107,14 @@
         context
         (let [interceptor (peek queue)
               pre-bindings (:bindings context)
-              ;old-context context
+              old-context context
               context (-> context
                           (assoc ::queue (pop queue))
                           ;; conj on nil returns a list, acts like a stack:
                           (assoc ::stack (conj stack interceptor))
                           (try-f interceptor :enter))]
           (cond
-            ;(channel? context) (go-async old-context context)
+            (channel? context) (go-async old-context context)
             (::error context) (dissoc context ::queue)
             (not= (:bindings context) pre-bindings) (assoc context ::rebind true)
             true (recur (check-terminators context))))))))
@@ -129,13 +143,13 @@
         context
         (let [interceptor (peek stack)
               pre-bindings (:bindings context)
-              ;old-context context
+              old-context context
               context (assoc context ::stack (pop stack))
               context (if (::error context)
                         (try-error context interceptor)
                         (try-f context interceptor :leave))]
           (cond
-            ;(channel? context) (go-async old-context context)
+            (channel? context) (go-async old-context context)
             (not= (:bindings context) pre-bindings) (assoc context ::rebind true)
             true (recur context)))))))
 
