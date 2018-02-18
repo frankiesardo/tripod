@@ -90,8 +90,8 @@
 (declare execute)
 
 (defn go-async [old-context context-ch]
-  (go (execute (<! context-ch)))
-  (-> old-context terminate))
+  (let [ch (go (execute (<! context-ch)))]
+    (-> old-context terminate)))
 
 (defn- enter-all-with-binding
   "Invokes :enter functions of all Interceptors on the execution

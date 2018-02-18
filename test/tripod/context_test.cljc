@@ -1,12 +1,12 @@
 (ns tripod.context-test
   (:require #?(:clj [clojure.test :refer :all]
                :cljs [cljs.test :refer-macros [deftest testing is run-tests]])
-            #?(:clj [clojure.core.async :as async :refer [go <!]]
-               :cljs [cljs.core.async :as async :refer [<!] :refer-macros [go]])
+            #?(:clj [clojure.core.async :as async :refer [go <! >! <!!]]
+               :cljs [cljs.core.async :as async :refer [<! >!] :refer-macros [go]])
             [tripod.context :as context]))
 
 (defn trace [context direction name]
-  (update-in context [::trace] (fnil conj []) [direction name]))
+   (update-in context [::trace] (fnil conj []) [direction name]))
 
 (defn tracer [name]
   {:name  name
@@ -23,10 +23,14 @@
              (update-in context [::trace] (fnil conj [])
                         [:error name :from (:from (ex-data error))]))))
 
-(defn asyncer [name]
+(defn asyncer [name ch trace]
   (assoc (tracer name)
     :enter (fn [ctx] (go
-                       (<! (async/timeout 500))
+                       (when-not (= trace (::trace ctx))
+                         (throw (ex-info "Unexpected trace"
+                                         {:expected trace
+                                          :actual (::trace ctx)})))
+                       (>! ch name)
                        (assoc ctx name ::async)))))
 
 (deftest simple-execution-test
@@ -42,14 +46,15 @@
                                            (tracer :c))))))
 
 (comment
-  (context/execute (context/enqueue {}
-                                    (tracer :a)
-                                    (asyncer :b)
-                                    (asyncer :c)
-                                    {:name :print
-                                     :enter (fn [ctx] (println "i'm here!"
-                                                               (:c ctx)
-                                                               (:b ctx)))})))
+  (let [ch (async/chan)
+        ctx (context/execute (context/enqueue {}
+                                              (tracer :a)
+                                              (asyncer :async-1 ch [[:enter :a]])
+                                              (tracer :b)
+                                              (asyncer :async-2 ch [[:enter :a]
+                                                                    [:enter :b]])))]
+    (is (= :async-1 (<!! ch)))
+    (is (= :async-2 (<!! ch)))))
 
 (deftest error-propagates-test
   (is (thrown? #?(:clj Exception :cljs js/Error)
