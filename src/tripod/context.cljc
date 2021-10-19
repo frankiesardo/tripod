@@ -55,7 +55,7 @@
                    :execution-id execution-id)
         (try (error-fn (dissoc context ::error) ex)
              (catch #?(:clj Throwable :cljs js/Object) e
-               (if (identical? (type e) (:type ex)))
+               (if (identical? (type e) (:type (ex-data ex)))
                  (do (log/debug :rethrow e :execution-id execution-id)
                      context)
                  (do (log/debug :throw e :suppressed (:exception-type ex) :execution-id execution-id)
