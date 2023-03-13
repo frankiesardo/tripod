@@ -12,7 +12,7 @@
   #?(:clj (java.util.UUID/randomUUID) :cljs (random-uuid)))
 
 ;; TODO: liter this through the call sites below.  This will allow pattern match on the results
-(defn- exception->ex-info [exception execution-id interceptor stage]
+(defn- exception->ex-info [^Throwable exception execution-id interceptor stage]
   (ex-info (str "Interceptor Exception: " #?(:clj  (.getMessage exception)
                                              :cljs (.-message exception)))
            (merge {:execution-id execution-id
